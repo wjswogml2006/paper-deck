@@ -1,0 +1,377 @@
+{
+  "papers": [
+    {
+      "id": "P-001",
+      "title": "A Reinforcement Learning Approach to Air Traffic Flow Management (ATFM)",
+      "authors": [
+        "Kim, J.",
+        "Park, S."
+      ],
+      "year": 2021,
+      "venue": "Transportation Research Part C",
+      "citations": 58,
+      "importance": 5,
+      "status": "상세 분석 완료",
+      "citationStatus": "초안에서 인용",
+      "topics": [
+        "ATFM",
+        "관제"
+      ],
+      "methods": [
+        "강화학습"
+      ],
+      "dataTypes": [
+        "레이더 트랙"
+      ],
+      "tags": [
+        "지상운영"
+      ],
+      "researchTypes": [
+        "시뮬레이션"
+      ],
+      "tldr": "공역 혼잡을 실시간으로 완화하기 위해 RL 기반 흐름 관리 정책을 제안.",
+      "researchQuestion": "수요-용량 불균형 상황에서 지연을 최소화하는 항공기 순서를 어떻게 학습할 것인가?",
+      "note": "내 박사논문 3장 시뮬레이션 baseline으로 쓸만함. 보상함수 설계를 다시 볼 것.",
+      "methodData": "Deep Q-Network + 실제 레이더 트랙 데이터(1년치, 인천/김포 TMA)",
+      "keyResult": "기존 규칙 기반 대비 총 지연시간 23% 감소.",
+      "problemStatement": "공역 혼잡 시 관제사의 수동적 항공기 순서 조정은 확장성이 낮고 일관성이 부족하다. 특히 다중 공항 TMA에서는 실시간 재조정이 어렵다.",
+      "contributions": [
+        "실시간 재계산이 가능한 경량 DQN 정책 구조 제안",
+        "실제 레이더 트랙 데이터로 검증한 최초의 사례 중 하나",
+        "기존 규칙 기반 대비 지연시간 23% 감소 입증"
+      ],
+      "assumptions": [
+        "공역을 이산 셀 그리드로 단순화",
+        "항공기 간 분리 기준을 고정값으로 가정",
+        "기상 변수는 정적이라고 가정"
+      ],
+      "limitations": [
+        "단일 TMA(인천/김포)에만 검증되어 일반화 가능성 불확실",
+        "극단적 기상 이벤트는 학습 데이터에 미포함",
+        "저자도 실시간 배치 전 안전성 검증 필요성을 언급"
+      ],
+      "relevanceScore": 85,
+      "connectionIdea": "내 ATFM 시뮬레이터의 보상함수 설계에 그대로 참고 가능. 인천 데이터 대신 김해공항 데이터로 재현 실험 고려.",
+      "borrowableElements": [
+        "보상함수 구조(지연시간+분리기준 위반 페널티)",
+        "레이더 트랙 전처리 파이프라인",
+        "비교 대상으로 쓴 규칙 기반 베이스라인 구현"
+      ],
+      "critique": [
+        "단일 공항 검증이라 다공항 네트워크 효과는 미반영",
+        "실시간 안전성 검증 없이 '적용 가능'이라 서술한 점은 과장으로 보임"
+      ],
+      "followUpActions": [
+        "☐ 코드 레포 확인 여부 문의 이메일 보내기",
+        "☐ 저자의 2022년 후속 논문 확인",
+        "☐ 참고문헌 12, 15번 원문 구하기"
+      ],
+      "keyReferences": [
+        "Bertsimas & Patterson (1998) — ATFM 최적화 고전",
+        "Odoni (1987) — 공역 용량 이론",
+        "Agogino & Tumer (2012) — 다중 에이전트 RL"
+      ],
+      "relatedLinks": [
+        "후속 논문 - https://example.com/paper1-followup",
+        "저자 구글 스칼라 - https://scholar.google.com/citations?user=example"
+      ],
+      "repo": "https://github.com/example/atfm-rl",
+      "url": "https://example.com/paper1",
+      "pdf": "https://example.com/paper1.pdf"
+    },
+    {
+      "id": "P-002",
+      "title": "Predicting Ground Operation Delays at Hub Airports Using Gradient Boosting",
+      "authors": [
+        "Lee, H.",
+        "Choi, M.",
+        "Yoon, D."
+      ],
+      "year": 2020,
+      "venue": "Journal of Air Transport Management",
+      "citations": 41,
+      "importance": 4,
+      "status": "1차 읽음",
+      "citationStatus": "아직 미인용",
+      "topics": [
+        "지상운영"
+      ],
+      "methods": [
+        "머신러닝",
+        "트리 기반 모델"
+      ],
+      "dataTypes": [
+        "항공일지",
+        "기상 데이터"
+      ],
+      "tags": [
+        "ATFM"
+      ],
+      "researchTypes": [
+        "실증 분석"
+      ],
+      "tldr": "허브 공항 지상 조업 지연을 예측하는 XGBoost 기반 모델.",
+      "researchQuestion": "기상·수하물·게이트 배정 변수만으로 지상 지연을 얼마나 정확히 예측할 수 있는가?",
+      "note": "피처 엔지니어링 부분만 발췌해서 우리 데이터셋에 적용해보고 싶음.",
+      "methodData": "XGBoost, 3개 공항 2년치 지상 조업 로그",
+      "keyResult": "기존 선형 회귀 대비 MAE 31% 개선.",
+      "problemStatement": "지상 조업 지연은 게이트 배정, 수하물 처리, 기상 등 복합 요인에 의해 발생하지만 기존 예측 모델은 단일 변수 위주였다.",
+      "contributions": [
+        "다변량 피처를 결합한 XGBoost 예측 모델 제안",
+        "3개 공항 데이터로 일반화 가능성 검증",
+        "피처 중요도 분석을 통한 운영 인사이트 제공"
+      ],
+      "assumptions": [
+        "게이트 배정 규칙은 공항별로 동일하다고 가정",
+        "수하물 처리 시간은 정규분포를 따른다고 가정"
+      ],
+      "limitations": [
+        "국내선 위주 데이터라 국제선 특수성 미반영(저자 언급)",
+        "실시간 예측이 아닌 사후 분석 성격이 강함(내 생각)"
+      ],
+      "relevanceScore": 60,
+      "connectionIdea": "우리 공항 지상 조업 데이터셋에도 비슷한 피처(게이트 배정, 기상)가 있어 baseline 비교 모델로 활용 가능.",
+      "borrowableElements": [
+        "피처 중요도 시각화 방식",
+        "XGBoost 하이퍼파라미터 튜닝 범위"
+      ],
+      "critique": [
+        "국내 공항 환경(협소한 게이트, 높은 회전율)에는 그대로 적용하기 어려울 수 있음"
+      ],
+      "followUpActions": [
+        "☐ 사용한 XGBoost 하이퍼파라미터 표 정리",
+        "☐ 저자 다른 논문 찾아보기"
+      ],
+      "keyReferences": [
+        "Rebollo & Balakrishnan (2014) — 항공 지연 예측 서베이"
+      ],
+      "relatedLinks": [],
+      "repo": "",
+      "url": "https://example.com/paper2",
+      "pdf": ""
+    },
+    {
+      "id": "P-003",
+      "title": "A Survey of Air Traffic Control Automation: From Rule-Based Systems to Deep Learning",
+      "authors": [
+        "García, R.",
+        "Novak, T."
+      ],
+      "year": 2019,
+      "venue": "IEEE Transactions on Intelligent Transportation Systems",
+      "citations": 120,
+      "importance": 5,
+      "status": "상세 분석 완료",
+      "citationStatus": "최종 논문에 인용",
+      "topics": [
+        "관제",
+        "ATFM"
+      ],
+      "methods": [
+        "서베이"
+      ],
+      "dataTypes": [
+        "문헌 리뷰"
+      ],
+      "tags": [],
+      "researchTypes": [
+        "이론"
+      ],
+      "tldr": "규칙 기반에서 딥러닝까지 관제 자동화 연구 흐름을 정리한 서베이.",
+      "researchQuestion": "관제 자동화 연구는 어떤 방법론적 전환을 거쳐왔는가?",
+      "note": "서론에 인용할 배경 서베이로 확정. 관련 연구 갭 정리에 그대로 재사용.",
+      "methodData": "120편 이상의 문헌에 대한 체계적 리뷰",
+      "keyResult": "2016년 이후 딥러닝 기반 접근이 급증했으나 실배치 사례는 제한적임을 확인.",
+      "problemStatement": "관제 자동화 연구가 방법론적으로 급속히 다변화되었지만, 이를 체계적으로 정리한 리뷰가 부족했다.",
+      "contributions": [
+        "120편 이상을 방법론 축으로 분류한 분류체계 제시",
+        "연구 갭(실배치 사례 부족)을 명시적으로 지적",
+        "향후 연구 방향 5가지 제안"
+      ],
+      "assumptions": [
+        "'딥러닝 기반'의 정의를 넓게 해석하여 포함 기준으로 사용"
+      ],
+      "limitations": [
+        "2019년까지의 문헌만 다뤄 최신 LLM 기반 연구는 미포함(내 생각)",
+        "저자도 비영어권 문헌 배제 가능성을 언급"
+      ],
+      "relevanceScore": 90,
+      "connectionIdea": "내 논문의 '연구 갭' 섹션 구조를 이 서베이의 분류체계를 참고해 재구성.",
+      "borrowableElements": [
+        "방법론 분류 체계(규칙기반/최적화/ML/딥러닝)",
+        "연구 갭 서술 방식"
+      ],
+      "critique": [
+        "일부 분류 기준이 다소 자의적으로 느껴짐"
+      ],
+      "followUpActions": [
+        "☐ 인용 문구 최종 확인",
+        "☐ 분류체계 표 캡처해서 노트에 저장"
+      ],
+      "keyReferences": [
+        "Nolan (2010) — 관제 시스템 개론",
+        "Erzberger (2004) — 자동화 관제 초기 연구"
+      ],
+      "relatedLinks": [
+        "서베이 확장판 - https://example.com/paper3-extended"
+      ],
+      "repo": "",
+      "url": "https://example.com/paper3",
+      "pdf": "https://example.com/paper3.pdf"
+    },
+    {
+      "id": "P-004",
+      "title": "Graph Neural Networks for Airport Surface Movement Prediction",
+      "authors": [
+        "Tanaka, Y.",
+        "Sato, K."
+      ],
+      "year": 2023,
+      "venue": "AIAA Journal of Aerospace Information Systems",
+      "citations": 9,
+      "importance": 4,
+      "status": "읽을 예정",
+      "citationStatus": "아직 미인용",
+      "topics": [
+        "지상운영"
+      ],
+      "methods": [
+        "GNN",
+        "딥러닝"
+      ],
+      "dataTypes": [
+        "ADS-B",
+        "레이더 트랙"
+      ],
+      "tags": [
+        "ATFM"
+      ],
+      "researchTypes": [
+        "시뮬레이션",
+        "실증 분석"
+      ],
+      "tldr": "공항 지상 이동 경로를 그래프로 모델링해 이동 시간을 예측.",
+      "researchQuestion": "공항 표면의 택시웨이 네트워크 구조를 GNN으로 표현하면 이동시간 예측 정확도가 향상되는가?",
+      "note": "아직 안 읽음 — GNN 구조가 우리 택시웨이 네트워크에도 적용될지 확인 필요.",
+      "methodData": "GraphSAGE, 하네다공항 6개월 ADS-B 데이터",
+      "keyResult": "기존 시계열 모델 대비 RMSE 18% 감소, 특히 혼잡 시간대에서 우수.",
+      "problemStatement": "",
+      "contributions": [],
+      "assumptions": [],
+      "limitations": [],
+      "relevanceScore": 70,
+      "connectionIdea": "",
+      "borrowableElements": [],
+      "critique": [],
+      "followUpActions": [
+        "☐ 우선 abstract·결론만 먼저 읽고 관련성 재평가"
+      ],
+      "keyReferences": [],
+      "relatedLinks": [],
+      "repo": "https://github.com/example/gnn-taxiway",
+      "url": "https://example.com/paper4",
+      "pdf": "https://example.com/paper4.pdf"
+    },
+    {
+      "id": "P-005",
+      "title": "Human Factors in Air Traffic Controller Workload Assessment",
+      "authors": [
+        "Schmidt, A."
+      ],
+      "year": 2018,
+      "venue": "Applied Ergonomics",
+      "citations": 76,
+      "importance": 3,
+      "status": "재검토 필요",
+      "citationStatus": "아직 미인용",
+      "topics": [
+        "관제"
+      ],
+      "methods": [
+        "설문조사",
+        "통계 분석"
+      ],
+      "dataTypes": [
+        "생리 신호",
+        "설문 데이터"
+      ],
+      "tags": [],
+      "researchTypes": [
+        "설문/인간요인"
+      ],
+      "tldr": "관제사의 인지 부하를 생리 신호와 설문을 결합해 평가하는 프레임워크.",
+      "researchQuestion": "교통량 증가에 따른 관제사의 실질적 인지 부하는 어떻게 측정 가능한가?",
+      "note": "통계 검정 방식이 최신 논문들과 달라서 재검토 필요 표시함.",
+      "methodData": "안구 추적 + NASA-TLX 설문, 관제사 24명 대상 시뮬레이션 실험",
+      "keyResult": "교통량이 임계치를 넘으면 워크로드가 선형이 아닌 급격한 비선형 증가를 보임.",
+      "problemStatement": "교통량 증가에 따른 관제사 워크로드를 정량화할 표준화된 방법이 부족했다.",
+      "contributions": [
+        "생리 신호(안구추적)와 주관적 설문(NASA-TLX)을 결합한 평가 프레임워크 제안",
+        "워크로드의 비선형 증가 패턴을 실험적으로 입증"
+      ],
+      "assumptions": [
+        "실험 참가자 24명이 실제 관제사 집단을 대표한다고 가정",
+        "시뮬레이션 환경이 실제 관제 환경과 유사하다고 가정"
+      ],
+      "limitations": [
+        "표본 크기가 24명으로 작아 통계적 검정력이 제한적(저자 언급)",
+        "시뮬레이션 환경이라 실제 스트레스 수준을 완전히 반영하지 못함(내 생각)"
+      ],
+      "relevanceScore": 45,
+      "connectionIdea": "인간요인 변수를 내 시뮬레이션 모델의 노이즈 항으로 반영할 수 있을지 검토.",
+      "borrowableElements": [
+        "NASA-TLX 설문 문항 구성"
+      ],
+      "critique": [
+        "표본 수가 작아 비선형 증가 패턴의 통계적 유의성에 의문"
+      ],
+      "followUpActions": [
+        "☐ 통계 검정 방법(비선형 회귀) 재확인",
+        "☐ 유사한 후속 연구 있는지 검색"
+      ],
+      "keyReferences": [
+        "Hart & Staveland (1988) — NASA-TLX 원논문"
+      ],
+      "relatedLinks": [],
+      "repo": "",
+      "url": "https://example.com/paper5",
+      "pdf": ""
+    }
+  ],
+  "ideas": [
+    {
+      "id": "I-001",
+      "title": "ATFM RL 정책을 한국 TMA(인천/김포)에 재현 실험",
+      "content": "P-001의 DQN 보상함수 구조를 그대로 가져오되, 국내 TMA 특성(협소한 공역, 군용기 혼재)을 반영한 제약 조건을 추가해보고 싶음. 우선 인천공항 6개월 레이더 트랙 데이터 확보 여부부터 확인 필요.",
+      "tags": [
+        "ATFM",
+        "강화학습",
+        "재현실험"
+      ],
+      "relatedPaperId": "P-001",
+      "createdAt": "2026-07-01"
+    },
+    {
+      "id": "I-002",
+      "title": "GNN 기반 지상 이동시간 예측 + 국내 공항 적용",
+      "content": "P-004의 GraphSAGE 구조를 김포/김해공항 ADS-B 데이터에 적용 가능한지 검토. 하네다와 달리 활주로-계류장 구조가 달라 그래프 구조 재설계가 필요할 것 같음.",
+      "tags": [
+        "GNN",
+        "지상운영"
+      ],
+      "relatedPaperId": "P-004",
+      "createdAt": "2026-07-05"
+    },
+    {
+      "id": "I-003",
+      "title": "관제사 워크로드 지표를 시뮬레이션 노이즈 항으로 모델링",
+      "content": "인간요인 연구(P-005)의 워크로드 비선형 증가 패턴을 내 ATFM 시뮬레이터의 '지연 허용도' 파라미터에 반영하면 더 현실적인 시뮬레이션이 가능할 듯. NASA-TLX 점수를 어떻게 정량 변수로 변환할지가 관건.",
+      "tags": [
+        "인간요인",
+        "시뮬레이션"
+      ],
+      "relatedPaperId": "P-005",
+      "createdAt": "2026-07-10"
+    }
+  ]
+}
