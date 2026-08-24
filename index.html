@@ -534,6 +534,26 @@ canvas{max-height:280px;}
 /* file import hidden input */
 .hidden-file{display:none;}
 
+/* ---- github sync badge ---- */
+.gh-badge{
+  font-family:var(--mono); font-size:11px; font-weight:700;
+  padding:6px 11px; border-radius:20px; white-space:nowrap;
+  border:1px solid transparent;
+}
+.gh-badge-off{background:#1c2740; color:var(--slate-light);}
+.gh-badge-synced{background:rgba(63,208,201,0.16); color:var(--cyan); border-color:rgba(63,208,201,0.4);}
+.gh-badge-pending{background:rgba(245,166,35,0.16); color:var(--amber); border-color:rgba(245,166,35,0.4);}
+.gh-badge-saving{background:rgba(245,166,35,0.16); color:var(--amber); border-color:rgba(245,166,35,0.4);}
+.gh-badge-error{background:rgba(225,88,77,0.16); color:var(--danger); border-color:rgba(225,88,77,0.4);}
+
+/* ---- github settings modal ---- */
+.gh-status-line{
+  font-size:12px; padding:9px 11px; border-radius:8px; margin-bottom:14px; line-height:1.5;
+}
+.gh-status-line.ok{background:#e5f8f0; color:#0a7a51;}
+.gh-status-line.err{background:#fdeaea; color:#b91c1c;}
+.gh-status-line.info{background:#eef2ff; color:#3949ab;}
+
 /* scrollbars */
 .sidebar::-webkit-scrollbar, .content::-webkit-scrollbar{width:8px;}
 .sidebar::-webkit-scrollbar-thumb{background:#2a3752; border-radius:4px;}
@@ -557,6 +577,8 @@ canvas{max-height:280px;}
       <input id="searchInput" type="text" placeholder="제목·저자·키워드로 검색…">
     </div>
     <div class="topbar-actions">
+      <span id="ghSyncBadge" class="gh-badge gh-badge-off" title="GitHub 미연결">● GitHub 미연결</span>
+      <button class="btn btn-ghost" id="ghConnectBtn">🔗 GitHub 연결</button>
       <button class="btn btn-amber" id="addPaperBtn">+ 논문 추가</button>
       <button class="btn btn-ghost" id="exportBtn">JSON 내보내기</button>
       <button class="btn btn-ghost" id="importBtn">JSON 불러오기</button>
@@ -635,8 +657,8 @@ canvas{max-height:280px;}
       </div>
 
       <div class="sidebar-footer">
-        데이터는 브라우저 세션에만 저장됩니다.<br>
-        작업 종료 전 <b style="color:var(--cyan)">JSON 내보내기</b>로 반드시 저장하세요.
+        상단 <b style="color:var(--cyan)">🔗 GitHub 연결</b>을 설정하면 변경사항이 자동으로 커밋됩니다.<br>
+        미연결 상태에서는 데이터가 브라우저 세션에만 저장되니, <b style="color:var(--cyan)">JSON 내보내기</b>로 백업하세요.
       </div>
     </div>
 
@@ -1086,6 +1108,46 @@ canvas{max-height:280px;}
   </div>
 </div>
 
+<!-- GITHUB SETTINGS MODAL -->
+<div class="modal-overlay" id="ghModalOverlay">
+  <div class="modal">
+    <button class="modal-close" id="ghModalClose">&times;</button>
+    <h2 id="ghModalTitle">GitHub 연결</h2>
+    <div id="ghStatusLine" style="display:none;" class="gh-status-line"></div>
+    <form id="ghForm">
+      <div class="form-row">
+        <label>Repository (owner/repo) *</label>
+        <input type="text" id="gh_repo" required placeholder="예: myname/paper-deck-data">
+      </div>
+      <div class="form-row two">
+        <div>
+          <label>파일 경로 *</label>
+          <input type="text" id="gh_path" required value="paper-deck-data.json" placeholder="data/paper-deck-data.json">
+        </div>
+        <div>
+          <label>브랜치</label>
+          <input type="text" id="gh_branch" value="main" placeholder="main">
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Personal Access Token (repo 쓰기 권한 필요) *</label>
+        <input type="password" id="gh_token" required placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off">
+        <div class="hint">
+          GitHub → Settings → Developer settings → Personal access tokens 에서 발급 (Contents: Read/Write 권한 포함).
+          토큰은 이 브라우저의 Claude 저장소에만 보관되며 GitHub API 호출에만 사용됩니다.
+        </div>
+      </div>
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button type="button" class="btn btn-danger" id="ghDisconnectBtn">연결 해제</button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-ghost" id="ghModalCancel" style="color:var(--text-dim); border-color:var(--line);">취소</button>
+          <button type="submit" class="btn btn-primary">연결 · 불러오기</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 /* =====================================================================
    DATA MODEL
@@ -1276,6 +1338,248 @@ let ideas = [
   }
 ];
 let nextIdeaIdNum = ideas.length + 1;
+
+/* =====================================================================
+   GITHUB SYNC
+   설정(owner/repo, path, branch, token)은 window.storage(개인 저장소)에
+   보관되어 새로고침/재접속해도 유지됩니다. 데이터 자체(papers/ideas)는
+   지정한 GitHub repo의 JSON 파일에 저장/로드됩니다.
+===================================================================== */
+const GH_CONFIG_KEY = "github_config_v1";
+let ghConfig = null;      // {owner, repo, path, branch, token}
+let ghFileSha = null;     // 마지막으로 읽은 파일의 sha (업데이트 시 필요)
+let ghSaveTimer = null;
+let ghSaving = false;
+let ghSaveQueued = false;
+
+function setSyncBadge(mode, msg){
+  const el = document.getElementById("ghSyncBadge");
+  if(!el) return;
+  el.classList.remove("gh-badge-off","gh-badge-synced","gh-badge-pending","gh-badge-saving","gh-badge-error");
+  const map = {
+    off:    ["gh-badge-off", "● GitHub 미연결"],
+    synced: ["gh-badge-synced", "● GitHub 동기화됨"],
+    pending:["gh-badge-pending", "● 저장 대기 중…"],
+    saving: ["gh-badge-saving", "● GitHub에 저장 중…"],
+    error:  ["gh-badge-error", "● 저장 오류"]
+  };
+  const [cls, label] = map[mode] || map.off;
+  el.classList.add(cls);
+  el.textContent = msg || label;
+  el.title = msg || label;
+}
+
+async function loadGithubConfig(){
+  try{
+    const res = await window.storage.get(GH_CONFIG_KEY, false);
+    if(res && res.value){
+      ghConfig = JSON.parse(res.value);
+      return true;
+    }
+  }catch(e){
+    // 저장된 설정 없음
+  }
+  ghConfig = null;
+  return false;
+}
+
+async function persistGithubConfig(cfg){
+  ghConfig = cfg;
+  await window.storage.set(GH_CONFIG_KEY, JSON.stringify(cfg), false);
+}
+
+async function clearGithubConfig(){
+  ghConfig = null;
+  ghFileSha = null;
+  try{ await window.storage.delete(GH_CONFIG_KEY, false); }catch(e){}
+}
+
+function ghContentsUrl(){
+  return `https://api.github.com/repos/${ghConfig.owner}/${ghConfig.repo}/contents/${ghConfig.path}`;
+}
+
+function b64EncodeUnicode(str){
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function b64DecodeUnicode(str){
+  return decodeURIComponent(escape(atob(str.replace(/\n/g,""))));
+}
+
+// GitHub repo에서 데이터 파일을 불러와 papers/ideas를 채웁니다.
+// 반환값: true = 원격 데이터로 성공적으로 교체함 / false = 못 불러옴(파일 없음 등)
+async function loadFromGithub(){
+  if(!ghConfig) return false;
+  try{
+    setSyncBadge("saving", "● GitHub에서 불러오는 중…");
+    const res = await fetch(`${ghContentsUrl()}?ref=${encodeURIComponent(ghConfig.branch)}`, {
+      headers:{
+        "Authorization": `Bearer ${ghConfig.token}`,
+        "Accept": "application/vnd.github+json"
+      }
+    });
+    if(res.status === 404){
+      // 파일이 아직 없음 — 첫 저장 시 새로 생성됨
+      ghFileSha = null;
+      setSyncBadge("synced", "● GitHub 연결됨 (파일 없음 · 첫 저장 대기)");
+      return false;
+    }
+    if(!res.ok){
+      const errBody = await res.json().catch(()=>({}));
+      throw new Error(errBody.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    ghFileSha = data.sha;
+    const decoded = b64DecodeUnicode(data.content);
+    const parsed = JSON.parse(decoded);
+    if(Array.isArray(parsed.papers)) papers = parsed.papers;
+    if(Array.isArray(parsed.ideas)) ideas = parsed.ideas;
+    nextIdNum = parsed.nextIdNum || (papers.length + 1);
+    nextIdeaIdNum = parsed.nextIdeaIdNum || (ideas.length + 1);
+    setSyncBadge("synced");
+    return true;
+  }catch(e){
+    console.error("GitHub load error:", e);
+    setSyncBadge("error", "● 불러오기 오류: " + e.message);
+    return false;
+  }
+}
+
+// papers/ideas 현재 상태를 GitHub repo 파일에 커밋합니다.
+async function saveToGithub(){
+  if(!ghConfig) return;
+  if(ghSaving){ ghSaveQueued = true; return; }
+  ghSaving = true;
+  setSyncBadge("saving");
+  try{
+    const payload = {
+      papers, ideas, nextIdNum, nextIdeaIdNum,
+      updatedAt: new Date().toISOString()
+    };
+    const body = {
+      message: `Update paper deck data (${new Date().toISOString()})`,
+      content: b64EncodeUnicode(JSON.stringify(payload, null, 2)),
+      branch: ghConfig.branch
+    };
+    if(ghFileSha) body.sha = ghFileSha;
+
+    const res = await fetch(ghContentsUrl(), {
+      method:"PUT",
+      headers:{
+        "Authorization": `Bearer ${ghConfig.token}`,
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    if(!res.ok){
+      // sha 충돌(다른 곳에서 먼저 저장됨) 시 최신 sha 다시 받아서 1회 재시도
+      if(res.status === 409){
+        await loadFromGithub();
+        ghSaving = false;
+        return saveToGithub();
+      }
+      const errBody = await res.json().catch(()=>({}));
+      throw new Error(errBody.message || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    ghFileSha = data.content.sha;
+    setSyncBadge("synced");
+  }catch(e){
+    console.error("GitHub save error:", e);
+    setSyncBadge("error", "● 저장 오류: " + e.message);
+  }finally{
+    ghSaving = false;
+    if(ghSaveQueued){
+      ghSaveQueued = false;
+      saveToGithub();
+    }
+  }
+}
+
+// 데이터가 바뀔 때마다 호출 — 1.2초 디바운스 후 GitHub에 자동 저장
+function markDirty(){
+  if(!ghConfig) return;
+  setSyncBadge("pending");
+  if(ghSaveTimer) clearTimeout(ghSaveTimer);
+  ghSaveTimer = setTimeout(()=>{ saveToGithub(); }, 1200);
+}
+
+function openGhModal(){
+  const statusEl = document.getElementById("ghStatusLine");
+  statusEl.style.display = "none";
+  if(ghConfig){
+    document.getElementById("gh_repo").value = `${ghConfig.owner}/${ghConfig.repo}`;
+    document.getElementById("gh_path").value = ghConfig.path;
+    document.getElementById("gh_branch").value = ghConfig.branch;
+    document.getElementById("gh_token").value = ghConfig.token;
+    document.getElementById("ghModalTitle").textContent = "GitHub 연결 설정";
+  } else {
+    document.getElementById("ghForm").reset();
+    document.getElementById("gh_path").value = "paper-deck-data.json";
+    document.getElementById("gh_branch").value = "main";
+    document.getElementById("ghModalTitle").textContent = "GitHub 연결";
+  }
+  document.getElementById("ghModalOverlay").classList.add("open");
+}
+function closeGhModal(){
+  document.getElementById("ghModalOverlay").classList.remove("open");
+}
+
+document.getElementById("ghConnectBtn").addEventListener("click", openGhModal);
+document.getElementById("ghModalClose").addEventListener("click", closeGhModal);
+document.getElementById("ghModalCancel").addEventListener("click", closeGhModal);
+document.getElementById("ghModalOverlay").addEventListener("click", e=>{
+  if(e.target===document.getElementById("ghModalOverlay")) closeGhModal();
+});
+
+document.getElementById("ghDisconnectBtn").addEventListener("click", async ()=>{
+  if(!confirm("GitHub 연결을 해제할까요? (저장된 원격 파일은 삭제되지 않습니다)")) return;
+  await clearGithubConfig();
+  setSyncBadge("off");
+  closeGhModal();
+});
+
+document.getElementById("ghForm").addEventListener("submit", async e=>{
+  e.preventDefault();
+  const repoRaw = document.getElementById("gh_repo").value.trim();
+  const parts = repoRaw.split("/").map(s=>s.trim()).filter(Boolean);
+  const statusEl = document.getElementById("ghStatusLine");
+  if(parts.length !== 2){
+    statusEl.style.display = "block";
+    statusEl.className = "gh-status-line err";
+    statusEl.textContent = "Repository는 'owner/repo' 형식으로 입력해주세요.";
+    return;
+  }
+  const cfg = {
+    owner: parts[0],
+    repo: parts[1],
+    path: document.getElementById("gh_path").value.trim().replace(/^\/+/, ""),
+    branch: document.getElementById("gh_branch").value.trim() || "main",
+    token: document.getElementById("gh_token").value.trim()
+  };
+  statusEl.style.display = "block";
+  statusEl.className = "gh-status-line info";
+  statusEl.textContent = "연결 확인 중…";
+
+  await persistGithubConfig(cfg);
+  const loaded = await loadFromGithub();
+
+  if(loaded){
+    statusEl.className = "gh-status-line ok";
+    statusEl.textContent = "연결 성공 — GitHub에서 기존 데이터를 불러왔습니다.";
+    renderAll();
+  } else if(ghConfig){
+    // 연결은 됐지만 파일이 아직 없거나 로드 실패
+    statusEl.className = "gh-status-line info";
+    statusEl.textContent = "연결되었습니다. 파일이 없으면 다음 저장 시 새로 생성됩니다.";
+  } else {
+    statusEl.className = "gh-status-line err";
+    statusEl.textContent = "연결에 실패했습니다. Repository / 토큰 권한을 확인해주세요.";
+    return;
+  }
+  setTimeout(closeGhModal, 1400);
+});
 
 /* =====================================================================
    STATE
@@ -1539,6 +1843,7 @@ function renderCards(){
       e.stopPropagation();
       if(confirm("이 논문을 삭제할까요?")){
         papers = papers.filter(p=>p.id!==btn.dataset.id);
+        markDirty();
         renderAll();
       }
     });
@@ -1747,6 +2052,7 @@ function openDetail(id){
   document.getElementById("detailDelBtn").addEventListener("click", ()=>{
     if(confirm("이 논문을 삭제할까요?")){
       papers = papers.filter(x=>x.id!==p.id);
+      markDirty();
       closeDetail();
       renderAll();
     }
@@ -1803,6 +2109,7 @@ function renderIdeas(){
     btn.addEventListener("click", ()=>{
       if(confirm("이 아이디어를 삭제할까요?")){
         ideas = ideas.filter(i=>i.id!==btn.dataset.id);
+        markDirty();
         renderIdeas();
       }
     });
@@ -1864,6 +2171,7 @@ ideaForm.addEventListener("submit", e=>{
     ideas.push(ideaData);
   }
   closeIdeaModal();
+  markDirty();
   renderIdeas();
 });
 
@@ -1889,6 +2197,7 @@ document.getElementById("importIdeasFile").addEventListener("change", e=>{
       const replace = confirm("현재 아이디어 목록을 불러온 JSON으로 '교체'할까요?\n취소를 누르면 기존 목록에 '추가'됩니다.");
       ideas = replace ? parsed : ideas.concat(parsed);
       nextIdeaIdNum = ideas.length + 1;
+      markDirty();
       renderIdeas();
       alert("불러오기 완료: "+parsed.length+"건");
     }catch(err){
@@ -2156,6 +2465,7 @@ reviewForm.addEventListener("submit", e=>{
   papers[idx].review = reviewData;
 
   closeReviewModal();
+  markDirty();
   renderAll();
 });
 
@@ -2209,6 +2519,7 @@ form.addEventListener("submit", e=>{
     papers.push(paperData);
   }
   closeModal();
+  markDirty();
   renderAll();
 });
 
@@ -2242,6 +2553,7 @@ document.getElementById("importFile").addEventListener("change", e=>{
         papers = papers.concat(parsed);
       }
       nextIdNum = papers.length + 1;
+      markDirty();
       renderAll();
       alert("불러오기 완료: "+parsed.length+"건");
     }catch(err){
@@ -2316,7 +2628,16 @@ function renderAll(){
   renderIdeas();
 }
 
-renderAll();
+async function initApp(){
+  setSyncBadge("off");
+  const hasConfig = await loadGithubConfig();
+  if(hasConfig){
+    await loadFromGithub(); // 성공하면 papers/ideas가 원격 데이터로 교체됨, 실패하면 기존(하드코딩) 데이터 유지
+  }
+  renderAll();
+}
+
+initApp();
 </script>
 </body>
 </html>
